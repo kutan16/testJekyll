@@ -1,0 +1,58 @@
+<html>
+    <head>
+        <!-- Load the latest Swagger UI code and style from npm using unpkg.com -->
+        <script src="https://unpkg.com/swagger-ui-dist@3/swagger-ui-bundle.js"></script>
+        <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@3/swagger-ui.css"/>
+        <link rel="stylesheet" href="/CloudAuthorization/external-application-management/assets/css/style.css?v=e1a7a5faca70eb36d184e4502626c713cf7abc51">
+        <title>External Application Trust API Specification</title>
+    </head>
+<body>
+    <div id="swagger-ui"></div> <!-- Div to hold the UI component -->
+    <div class="container-lg px-3 my-5 markdown-body">
+
+        <h1>External Application Trust API Specifications</h1>
+        Below is a list of links to navigate the API specs for different release versions.
+        Click a version below and refresh the page to go back.
+        <h2>Versions</h2>
+        <ul>
+            <li onclick=snapshot() style="color: blue">1.1-SNAPSHOT</li>
+            <li onclick=release('1.0') style="color: blue">1.0</li>
+        </ul>
+    </div>
+    <script>
+	    release = function (version) {
+	        // Begin Swagger UI call region
+	        var myHeaders = new Headers();
+	        const ui = SwaggerUIBundle({
+	            url: "external-application-trust-service/src/site/resources/versions/"+version+"/openapi.yaml",  //Location of the released Open API spec in the repo for this version
+	            dom_id: '#swagger-ui',
+	            presets: [
+	                SwaggerUIBundle.presets.apis,
+	                SwaggerUIBundle.SwaggerUIStandalonePreset
+	            ],
+	            plugins: [
+	                SwaggerUIBundle.plugins.DownloadUrl
+	            ],
+	        })
+	    }
+    
+        snapshot = function () {
+            // Begin Swagger UI call region
+            const ui = SwaggerUIBundle({
+                url: "external-application-trust-service/src/site/resources/openapi.yaml", //Location of snapshot Open API spec in the repo
+                dom_id: '#swagger-ui',
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIBundle.SwaggerUIStandalonePreset
+                ],
+                plugins: [
+                    SwaggerUIBundle.plugins.DownloadUrl
+                ],
+            })
+        }
+
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+    </body>
+</html>
