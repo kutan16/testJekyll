@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+    <body>
+        <menu ref="parent"/>
+        <menu ref="documents"/>
+        <menu name="Documents">
+            <item name="About" href="index.html"/>
+        </menu>
+
+        <menu name="Rest API">
+            <item name="Overview" href="rest.html"/>
+        </menu>
+
+        <menu ref="reports"/>
+        <menu ref="modules"/>
+    </body>
+</project>

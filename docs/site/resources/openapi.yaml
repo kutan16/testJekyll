@@ -1,0 +1,313 @@
+---
+openapi: "3.0.1"
+info:
+  title: "External Application Trust"
+  version: "1.0"
+servers:
+  - url: "https://external-application-trust-api.devcernercentral.net/"
+tags:
+  - name: External Application Trust
+    description: The External Application Trust service presents callers with information that can be used to help them
+      determine how to display information about the application.  All examples shown demonstrate possible properties,
+      they are not intended to show valid examples of possible responses.  For a discussion of valid values for the
+      response, please see the <a href="https://github.cerner.com/CloudAuthorization/external-application-trust/blob/master/README.md">README.md.</a>
+paths:
+  "/trust-info/applications":
+    post:
+      tags:
+        - Trust Info - Multiple Applications
+      summary:
+        "Query the trust service for multiple applications"
+      requestBody:
+        description: |
+          Query multiple applications at a time. The request body is a mapping of `applications` to an array of JSON objects which
+          contains the redirect URL for the application. The `urls` should be the same redirect URL(s) that is/are registered
+          for the provided `id` at the time the application was registered.  It is the responsibility of consumers of
+          the API to ensure the `id` and `urls` correlate to the same application.  Null values for `id` will be
+          ignored.
+        required: true
+        content:
+          application/json:
+            schema:
+              description: "The request body is a mapping of `applications` to an array of objects containing the `id` and `urls` property"
+              # this example must be updated manually due to a limitation in OpenAPI for creating example keys
+              example: |
+                {
+                  "applications": [
+                    {
+                      "id": "220e15b9-e4d5-470d-9e10-ef53e5164e42",
+                      "urls": [ "https://www.some-url.com" ]
+                    },
+                    {
+                      "id": "6adeb21e-e8d3-43d7-a216-1f16df82e94a",
+                      "urls": [
+                          "https://www.some-other-url.com",
+                          "invalid.url.com"
+                      ]
+                    },
+                    {
+                      "id": "eab00e8a-f0c5-4dc0-8330-3b46f93578da",
+                      "urls": [ "" ]
+                    }
+                  ]
+                }
+              additionalProperties:
+                type: "object"
+                properties:
+                  appUrl:
+                    description: "The URL of the application"
+      security:
+        - OAuth10a: [ ]
+        - OAuth20BearerAuth: [ ]
+      responses:
+        "200":
+          description: "Data relevant to making trust determinations about multiple applications.  The response contains a mapping of `id` to the array of trust informations about that application."
+          headers:
+            Cache-Control:
+              description: "The max-age directive signals that callers can/should cache the response from this call for the specified number of seconds."
+              schema:
+                type: "string"
+                example: max-age=600
+          content:
+            application/json:
+              schema:
+                description: "The response body is a mapping of `id` to a array of trustInfo objects."
+                # this example must be updated manually due to a limitation in OpenAPI for creating example keys
+                example: |
+                  {
+                    "220e15b9-e4d5-470d-9e10-ef53e5164e42": [
+                      {
+                        "requestedAppUrl": "https://www.some-url.com",
+                        "trustInfo": {
+                          "trustLevel": "KNOWN_OV",
+                          "domain": {
+                            "name": "some-url.com",
+                            "trusted": "true",
+                            "reason": "urn:cerner:external-application:dns:txt-record-contains-appid"
+                          },
+                          "organization": {
+                            "name": "SomeUrl Corporation",
+                            "trusted": "true",
+                            "location": {
+                              "region": "US",
+                              "province": "MO",
+                              "locality": "Kansas City"
+                            },
+                            "reason": "urn:cerner:external-application:certificate:organization-validated"
+                          }
+                        }
+                      }
+                    ],
+                    "6adeb21e-e8d3-43d7-a216-1f16df82e94a": [
+                      {
+                        "requestedAppUrl": "https://www.some-other-url.com",
+                        "trustInfo": {
+                          "trustLevel": "UNKNOWN",
+                          "domain": {
+                            "name": "some-other-url.com",
+                            "trusted": "false",
+                            "reason": "urn:cerner:external-application:dns:txt-record-missing-appid"
+                          },
+                          "organization": {
+                            "trusted": "false",
+                            "name": null,
+                            "location": null,
+                            "reason": "urn:cerner:external-application:certificate:domain-validated"
+                          }
+                        }
+                      }
+                    ],
+                    "eab00e8a-f0c5-4dc0-8330-3b46f93578da": [
+                      {
+                        "requestedAppUrl": "",
+                        "error": {
+                          "message": "appUrl was not provided",
+                          "reason": "urn:cerner:external-application:error:missed-url"
+                        }
+                      }
+                    ]
+                  }
+                additionalProperties:
+                  type: "object"
+                  oneOf:
+                    - type: "object"
+                      properties:
+                        requestedAppUrl:
+                          $ref: "#components/requestedAppUrl"
+                        trustInfo:
+                          $ref: "#components/trustInfo"
+                    - type: "object"
+                      properties:
+                        requestedAppUrl:
+                          $ref: "#components/requestedAppUrl"
+                        error:
+                          type: "object"
+                          description: "A description of the error with the input parameters."
+                          properties:
+                            message:
+                              type: "string"
+                              description: "The error message"
+                              example: "appUrl was not provided"
+                            reason:
+                              description: |
+                                Reason that contributes to the 'error' property value for this application. These URNs are useful for debugging/logging purposes. Additional reasons may be added in the future.
+                                - **urn:cerner:external-application:error:missed-url**:  There is no URL in the request.
+                                - **urn:cerner:external-application:error:invalid-url**:  Provided url is invalid.
+                                - **urn:cerner:external-application:error:invalid-url:no-protocol**: The url was provided without protocol.
+                                - **urn:cerner:external-application:error:internal-server-error**:  Internal error occurred during retrieval.
+                              type: "string"
+                              example: "urn:cerner:external-application:error:missed-url"
+                              enum:
+                                - "urn:cerner:external-application:error:missed-url"
+                                - "urn:cerner:external-application:error:invalid-url"
+                                - "urn:cerner:external-application:error:invalid-url:no-protocol"
+                                - "urn:cerner:external-application:error:internal-server-error"
+        "400":
+          description: "When the request body is empty or all ids and urls are either null or blank."
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  error:
+                    type: "string"
+                    example: BAD_REQUEST
+                  statusCode:
+                    type: "integer"
+                    example: 400
+                  message:
+                    type: "string"
+                    example: request body is empty
+
+# reusable components for use in $ref
+components:
+  requestedAppUrl:
+    type: "string"
+    description: "The requested App URL to identify a response"
+    example: "https://some.app.com"
+  trustInfo:
+    type: "object"
+    properties:
+      trustLevel:
+        required: true
+        description: |
+          Enumerated values to convey information on the overall fidelity of the data reported
+          - ERROR: There was an error retrieving one or more items relating to publicly known data for the application.
+          - UNKNOWN: All publicly known data was retrieved.  That data indicate there is a low level of correlation between the input parameters and the values returned from public data sources.
+          - KNOWN_DV: All publicly known data was retrieved.  That data indicate there is a low to moderate level of correlation between the input parameters and the values returned from public data sources.  The certificate for the domain hosting this application is a domain validation (DV) SSL certificate.
+          - KNOWN_OV: All publicly known data was retrieved.  That data indicate there is a moderate to high level of correlation between the input parameters and the values returned from public data sources.  The certificate for the domain hosting this application is an organization or extended validation (OV/EV) SSL certificate.
+        type: "string"
+        enum: [ "ERROR", "UNKNOWN", "KNOWN_DV", "KNOWN_OV" ]
+        example: "KNOWN_OV"
+      domain:
+        type: "object"
+        required: true
+        nullable: false
+        description: "Determinations concerning the external application's domain"
+        properties:
+          name:
+            type: "string"
+            description: "The eTLD+1 domain of the external application's appUrl input parameter"
+            example: "some-app.com"
+          trusted:
+            type: "boolean"
+            description: "A boolean flag indicating whether the domain of the application has been vetted by the trust service through independent, public data sources"
+            example: true
+          reason:
+            description: |
+              Reason that contributes to the 'trustLevel' property value for this application.  These URNs are useful for debugging/logging purposes and should not be directly relied upon as a data point to make a trust determination.  Additional reasons may be added in the future.
+              - **urn:cerner:external-application:dns:txt-record-contains-appid**:  DNS TXT records were retrieved and the `id` was found in the TXT records.
+              - **urn:cerner:external-application:dns:txt-record-missing-appid**:  DNS TXT records were retrieved but the `id` was not found in any of the TXT records.
+              - **urn:cerner:external-application:dns:https-protocol-required**: DNS records are not retrieved for non-https urls.
+              - **urn:cerner:external-application:dns:no-domain-name-provided**:  DNS records are not provided. This indicates that DNS TXT records do not exist for IP address.
+              - **urn:cerner:external-application:dns:retrieval-error**:  DNS records could not be retrieved.  This indicates any number of factors that might lead to a failure to acquire DNS TXT records.
+            type: "string"
+            example: "urn:cerner:external-application:dns:txt-record-contains-appId"
+            enum:
+              - "urn:cerner:external-application:dns:txt-record-contains-appid"
+              - "urn:cerner:external-application:dns:txt-record-missing-appid"
+              - "urn:cerner:external-application:dns:https-protocol-required"
+              - "urn:cerner:external-application:dns:no-domain-name-provided"
+              - "urn:cerner:external-application:dns:retrieval-error"
+      organization:
+        type: "object"
+        required: true
+        nullable: false
+        description: "The organization that owns the certificate"
+        properties:
+          name:
+            type: "string"
+            nullable: true
+            description: "The name of the organization hosting the domain specified in the appUrl input parameter"
+            example: "SomeApp Corporation"
+          trusted:
+            type: "boolean"
+            description: "A boolean flag indicating whether organization information has been vetted by the trust service through independent, public data sources"
+            example: true
+          location:
+            type: "object"
+            nullable: true
+            description: "The location of the certificate subject"
+            properties:
+              region:
+                type: "string"
+                description: "The region for the certificate subject"
+                example: "US"
+              province:
+                type: "string"
+                description: "The province for the certificate subject"
+                example: "MO"
+              locality:
+                type: "string"
+                description: "The locality for the certificate subject"
+                example: "Kansas City"
+          reason:
+            type: "array"
+            nullable: false
+            description: |
+              Reason that contributes to the 'trustLevel' property value for this application. These URNs are useful for debugging/logging purposes and should not be directly relied upon as a data point to make a trust determination.  Additional reasons may be added in the future.
+              - *urn:cerner:external-application:certificate:domain-validated*:  SSL certificates were retrieved.  The certificate was a domain validation (DV) certificate.
+              - *urn:cerner:external-application:certificate:organization-validated*:  SSL certificates were retrieved.  The certificate was an organization or extended validation (OV/EV) certificate.
+              - *urn:cerner:external-application:certificate:retrieval-error*:  Certificates could not be retrieved due to a number of factors that might lead to failure to connect.
+              - *urn:cerner:external-application:certificate:untrusted-certificate-authority*: SSL certificates were retrieved, but they are signed by an unknown/untrusted Certificate Authority.
+              - *urn:cerner:external-application:certificate:expired*:  SSL certificates were retrieved, but they are expired.
+              - *urn:cerner:external-application:certificate:unknown-host*: No host was found for the provided `appUrl`.
+              - *urn:cerner:external-application:certificate:connection-timeout*: There was a connection timeout when contacting the `appUrl` to retrieve certificates.
+              - *urn:cerner:external-application:certificate:not-yet-valid*: SSL certificates were retrieved, but they are not valid yet.
+              - *urn:cerner:external-application:certificate:revoked*: SSL certificates were retrieved, but they are revoked.
+              - *urn:cerner:external-application:certificate:https-protocol-required*: Certificates are not retrieved for non-https urls
+              - *urn:cerner:external-application:certificate:tls-handshake-error*: An unspecified error occurred while retrieving and/or validating the SSL certificates.
+            example: "urn:cerner:external-application:certificate:organization-validated"
+            enum:
+              - "urn:cerner:external-application:certificate:domain-validated"
+              - "urn:cerner:external-application:certificate:organization-validated"
+              - "urn:cerner:external-application:certificate:retrieval-error"
+              - "urn:cerner:external-application:certificate:untrusted-certificate-authority"
+              - "urn:cerner:external-application:certificate:expired"
+              - "urn:cerner:external-application:certificate:unknown-host"
+              - "urn:cerner:external-application:certificate:connection-timeout"
+              - "urn:cerner:external-application:certificate:not-yet-valid"
+              - "urn:cerner:external-application:certificate:revoked"
+              - "urn:cerner:external-application:certificate:https-protocol-required"
+              - "urn:cerner:external-application:certificate:tls-handshake-error"
+  securitySchemes:
+    OAuth10a:
+      type: http
+      scheme: oauth
+      description: >-
+        An OAuth 1.0a Token to authenticate External Application Trust requests against a CernerCentral System Account, in dev this can be accessed at this link https://devcernercentral.com/system-accounts/.
+    OAuth20BearerAuth:
+      type: http
+      scheme: bearer
+      description: >-
+        A OAuth 2.0 Bearer Token to authenticate External Application Trust requests against a CernerCentral System Account, in dev this can be accessed at this link https://devcernercentral.com/system-accounts/.
+  parameters:
+    Authorization:
+      in: header
+      name: Authorization
+      description: >-
+        A Bearer Token to authenticate External Application Trust requests against a CernerCentral System Account, in dev this can be accessed at this link https://devcernercentral.com/system-accounts/.
+      schema:
+        type: string
+        example: Bearer <<ACTUAL TOKEN HERE>>
+      required: false
